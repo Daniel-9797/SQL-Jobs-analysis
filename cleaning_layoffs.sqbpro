@@ -6,6 +6,16 @@
 
 --First, we create a new table to not interfer in the raw data 
 
+CREATE TABLE layoffs
+LIKE layoffs_original
+
+SELECT *
+FROM layoffs
+
+INSERT layoffs
+SELECT *
+FROM layoffs_original
+
 -- 1. Then, we begin with dupplicates
 
 SELECT *,
