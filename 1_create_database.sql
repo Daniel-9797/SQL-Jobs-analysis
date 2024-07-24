@@ -1,0 +1,3 @@
+CREATE DATABASE sql_jobs;
+
+-- DROP DATABASE IF EXISTS sql_jobs;
