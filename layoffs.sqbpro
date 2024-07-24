@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="/Users/danieldelafuenteferre/Desktop/Bigdata/layoffs.sql" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="1020"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="0,10:Navegables"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="Cleaning">--DATA CLEANING
+-- 1- Remove duplicates if any
+--2. Standarize the Data 
+--3. Null values or blank VALUES
+--4. Remove any columns if necessary
+
+--First, we create a new table to not interfer in the raw data 
+
+-- 1. Then, we begin with dupplicates
+
+SELECT *,
+ROW_NUMBER() OVER (
+PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
+FROM layoffs
+
+
+WITH duplicate_cte AS 
+(
+SELECT *,
+ROW_NUMBER() OVER (
+PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
+FROM layoffs
+)
+
+SELECT *
+FROM duplicate_cte
+WHERE row_num &gt;1
+
+CREATE TABLE &quot;layoffs2&quot; (
+	&quot;company&quot;	TEXT,
+	&quot;location&quot;	TEXT,
+	&quot;industry&quot;	TEXT,
+	&quot;total_laid_off&quot;	TEXT,
+	&quot;percentage_laid_off&quot;	TEXT,
+	&quot;date&quot;	TEXT,
+	&quot;stage&quot;	TEXT,
+	&quot;country&quot;	TEXT,
+	&quot;funds_raised_millions&quot;	TEXT,
+	&quot;row_num&quot; INT
+)
+
+SELECT *
+FROM layoffs2
+
+INSERT INTO layoffs2
+SELECT *,
+ROW_NUMBER() OVER (
+PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
+FROM layoffs
+
+
+SELECT *
+FROM layoffs2
+WHERE row_num &gt;1
+
+DELETE 
+FROM layoffs2
+WHERE row_num &gt;1
+
+SELECT *
+FROM layoffs2
+
+--2. Standardizing data: we look through each column, just in case some small issue exists
+
+SELECT  company, TRIM(company)
+FROM layoffs2
+
+UPDATE layoffs2
+SET company = TRIM(company)
+
+
+SELECT  DISTINCT industry
+FROM layoffs2
+
+SELECT *
+FROM layoffs2
+WHERE industry LIKE 'Crypto%';
+
+UPDATE layoffs2
+SET industry = 'Crypto'
+WHERE industry LIKE 'Crypto%';
+
+SELECT DISTINCT country, 
+RTRIM(country, '.') AS country_trimmed
+FROM layoffs2
+ORDER BY 1;
+
+UPDATE layoffs2
+SET country = RTRIM(country, '.')
+WHERE country LIKE 'United States%';
+
+SELECT*
+FROM layoffs2
+
+
+SELECT `date`,
+STR_TO_DATE(`date`,'%d/%m/%Y')
+FROM layoffs2
+
+ALTER TABLE layoffs2 ADD COLUMN converted_date DATE;
+
+UPDATE layoffs2
+SET converted_date = date(
+    SUBSTR(date, 7, 4) || '-' || SUBSTR(date, 4, 2) || '-' || SUBSTR(date, 1, 2)
+);
+
+-- 3. Nulls and Blanks
+
+SELECT *
+FROM layoffs2
+WHERE total_laid_off IS NULL
+
+SELECT*
+FROM layoffs2 t1
+JOIN layoffs2 t2
+		ON t1.company = t2.company
+WHERE (t1.industry IS NOT NULL OR t1.industry = ' ')
+AND t2.industry IS NOT NULL
+
+UPDATE layoffs2 AS t1
+JOIN layoffs2 t2
+		ON t1.company = t2.company
+SET t1.industry = t2.industry
+WHERE (t1.industry IS NOT NULL OR t1.industry = ' ')
+AND t2.industry IS NOT NULL 
+
+DELETE 
+FROM layoffs2
+WHERE total_laid_off is NULL	
+and percentage_laid_off IS NULL
+
+ALTER TABLE
+DROP COLUMN row_num
+</sql><sql name="Analysis">-- EXPLORATORY DATA ANALYSIS
+
+SELECT *
+FROM layoffs2;
+
+SELECT AVG(total_laid_off)
+FROM layoffs2
+WHERE total_laid_off IS NOT NULL;
+
+SELECT *
+FROM layoffs2
+WHERE percentage_laid_off = 1;
+
+SELECT substr(date, 1,2)
+FROM layoffs2
+</sql><current_tab id="0"/></tab_sql></sqlb_project>
